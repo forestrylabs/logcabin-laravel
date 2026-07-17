@@ -1,0 +1,63 @@
+{
+    "name": "forestry/logcabin-laravel",
+    "description": "Ships logs and health heartbeats from a Laravel application to a central Log Cabin panel.",
+    "type": "library",
+    "keywords": [
+        "laravel",
+        "logging",
+        "monitoring",
+        "heartbeat",
+        "uptime",
+        "logcabin"
+    ],
+    "homepage": "https://github.com/forestrylabs/logcabin-laravel",
+    "license": "AGPL-3.0-or-later",
+    "authors": [
+        {
+            "name": "Forestry Labs",
+            "homepage": "https://github.com/forestrylabs"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/forestrylabs/logcabin-laravel/issues",
+        "source": "https://github.com/forestrylabs/logcabin-laravel"
+    },
+    "require": {
+        "php": "^8.2",
+        "illuminate/support": "^11.0|^12.0|^13.0",
+        "illuminate/http": "^11.0|^12.0|^13.0",
+        "illuminate/log": "^11.0|^12.0|^13.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^9.0|^10.0",
+        "phpunit/phpunit": "^10.5|^11.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Forestry\\LogCabin\\Laravel\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Forestry\\LogCabin\\Laravel\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/phpunit"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Forestry\\LogCabin\\Laravel\\LogCabinServiceProvider"
+            ],
+            "aliases": {
+                "LogCabin": "Forestry\\LogCabin\\Laravel\\Facades\\LogCabin"
+            }
+        }
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
