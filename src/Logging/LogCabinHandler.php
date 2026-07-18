@@ -27,8 +27,38 @@ use Throwable;
 
 class LogCabinHandler extends AbstractProcessingHandler
 {
+    /**
+     * When false, records are dropped rather than shipped. Disabled while a
+     * batch is in flight so logging during delivery can't loop back in.
+     */
+    protected static bool $capturing = true;
+
+    /**
+     * Run $callback with capture disabled.
+     *
+     * @template TReturn
+     *
+     * @param  callable(): TReturn  $callback
+     * @return TReturn
+     */
+    public static function withoutCapturing(callable $callback): mixed
+    {
+        $previous = self::$capturing;
+        self::$capturing = false;
+
+        try {
+            return $callback();
+        } finally {
+            self::$capturing = $previous;
+        }
+    }
+
     protected function write(LogRecord $record): void
     {
+        if (! self::$capturing) {
+            return;
+        }
+
         $exception = $record->context['exception'] ?? null;
 
         PushLogEntriesJob::dispatch([[
