@@ -1,23 +1,5 @@
 <?php
 
-/*
- * Log Cabin — self-hosted log, heartbeat and uptime monitoring for web apps.
- * Copyright (C) 2026 Forestry Labs
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
-
 namespace Forestry\LogCabin\Laravel\Jobs;
 
 use Illuminate\Bus\Queueable;
@@ -59,10 +41,10 @@ class PushLogEntriesJob implements ShouldQueue
             return;
         }
 
-        // Handle failures here rather than letting them bubble: an exception
-        // out of the job is reported by the queue worker via the default log
-        // channel, which may route back through logcabin and loop. Disabling
-        // capture during the push guards against the same loop.
+        // Handle failures here instead of letting them bubble. An exception
+        // out of the job is reported by the worker on the default log channel,
+        // which may route back through logcabin and loop. Disabling capture
+        // during the push guards against the same loop.
         try {
             LogCabinHandler::withoutCapturing(fn () => $client->sendLogs($this->entries));
         } catch (RequestException $exception) {
@@ -108,10 +90,8 @@ class PushLogEntriesJob implements ShouldQueue
 
     public function failed(Throwable $exception): void
     {
-        // Deliberately logs to the "single" channel rather than the default
-        // (possibly "stack") channel, since "stack" may include the
-        // logcabin channel itself — logging a delivery failure through it
-        // would attempt another delivery and could loop.
+        // Log to the "single" channel, not the default "stack", which may
+        // include the logcabin channel and turn this into another delivery.
         Log::channel('single')->warning('Log Cabin: failed to push log entries after retries.', [
             'exception' => $exception->getMessage(),
         ]);

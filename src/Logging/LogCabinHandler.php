@@ -1,23 +1,5 @@
 <?php
 
-/*
- * Log Cabin — self-hosted log, heartbeat and uptime monitoring for web apps.
- * Copyright (C) 2026 Forestry Labs
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
-
 namespace Forestry\LogCabin\Laravel\Logging;
 
 use Forestry\LogCabin\Laravel\Jobs\PushLogEntriesJob;
@@ -27,10 +9,8 @@ use Throwable;
 
 class LogCabinHandler extends AbstractProcessingHandler
 {
-    /**
-     * When false, records are dropped rather than shipped. Disabled while a
-     * batch is in flight so logging during delivery can't loop back in.
-     */
+    // When false, records are dropped instead of shipped. Disabled while a
+    // batch is being delivered so logging during delivery can't loop back in.
     protected static bool $capturing = true;
 
     /**
@@ -59,17 +39,31 @@ class LogCabinHandler extends AbstractProcessingHandler
             return;
         }
 
+        // Also checked here, not only in the job: dispatching writes to the
+        // queue, so a disabled package must not dispatch at all.
+        if (! config('logcabin.enabled')) {
+            return;
+        }
+
         $exception = $record->context['exception'] ?? null;
 
-        PushLogEntriesJob::dispatch([[
-            'level' => strtolower($record->level->name),
-            'type' => $exception instanceof Throwable ? get_class($exception) : null,
-            'message' => $record->message,
-            'context' => $this->contextWithoutException($record->context),
-            'exception' => $exception instanceof Throwable ? $this->normalizeException($exception) : null,
-            'environment' => config('app.env'),
-            'occurred_at' => now()->toIso8601String(),
-        ]]);
+        // The queue backend may be unavailable, e.g. the database driver
+        // before the jobs table exists during a migration. Logging must not
+        // break the code that emitted the log, so swallow dispatch failures.
+        // Use error_log() rather than the logger to avoid recursing back here.
+        try {
+            PushLogEntriesJob::dispatch([[
+                'level' => strtolower($record->level->name),
+                'type' => $exception instanceof Throwable ? get_class($exception) : null,
+                'message' => $record->message,
+                'context' => $this->contextWithoutException($record->context),
+                'exception' => $exception instanceof Throwable ? $this->normalizeException($exception) : null,
+                'environment' => config('app.env'),
+                'occurred_at' => now()->toIso8601String(),
+            ]]);
+        } catch (Throwable $e) {
+            error_log('Log Cabin: could not dispatch log entries: '.$e->getMessage());
+        }
     }
 
     /**
